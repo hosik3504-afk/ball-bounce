@@ -1,9 +1,298 @@
-캔버스는 뜨는데 버튼이 안 눌리는 거네요! 카카오톡 인앱브라우저에서 `requestAnimationFrame` 이 막히는 경우가 있어요. `setInterval` 방식으로 바꿔서 올려드릴게요.
-
-아래 코드로 다시 교체해주세요!
-
-```html
 <!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>공 튀기기 실험실</title>
+<style>
+html, body { width:100%; -webkit-text-size-adjust:100%; }
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:rgba(0,0,0,0); }
+body { font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:#f0f4f8; padding:12px; }
+.lab { background:#fff; border-radius:14px; padding:14px; max-width:680px; margin:0 auto; }
+h1 { font-size:16px; font-weight:700; color:#1a1a2e; margin-bottom:12px; }
+.controls { display:flex; gap:8px; margin-bottom:10px; }
+.ctrl-card { flex:1; border-radius:10px; padding:10px 8px; border:1.5px solid #e8edf3; }
+.ctrl-card.hc { background:#f0f7ff; border-color:#bdd5f5; }
+.ctrl-card.mc { background:#fff4f0; border-color:#f5c6b0; }
+.ctrl-card.sc { background:#f0fff6; border-color:#a8e6c1; }
+.ctrl-label { font-size:10px; font-weight:700; margin-bottom:7px; display:block; }
+.hc .ctrl-label { color:#1a6fc4; }
+.mc .ctrl-label { color:#c04a1a; }
+.sc .ctrl-label { color:#1a8c4a; }
+.btn-group { display:flex; flex-direction:column; gap:5px; }
+.opt-btn {
+  display:block; width:100%; background:#fff;
+  border:1.5px solid #dde3ea; border-radius:7px;
+  font-size:12px; font-weight:600; color:#555;
+  text-align:center; cursor:pointer;
+  height:38px; line-height:38px;
+  -webkit-appearance:none; outline:none;
+  -webkit-user-select:none; user-select:none;
+  touch-action:manipulation;
+}
+#height-group .opt-btn.on { background:#1a6fc4; border-color:#1a6fc4; color:#fff; }
+#mass-group   .opt-btn.on { background:#c04a1a; border-color:#c04a1a; color:#fff; }
+#size-group   .opt-btn.on { background:#1a8c4a; border-color:#1a8c4a; color:#fff; }
+.launch-row { display:flex; gap:8px; margin-bottom:10px; }
+.launch-btn {
+  flex:1; background:#1a1a2e; border:none; border-radius:10px;
+  color:#fff; font-size:14px; font-weight:700;
+  height:48px; cursor:pointer;
+  -webkit-appearance:none; outline:none;
+  touch-action:manipulation; -webkit-user-select:none;
+}
+.reset-btn {
+  background:#f0f2f5; border:1.5px solid #dde3ea; border-radius:10px;
+  color:#555; font-size:13px; font-weight:600;
+  height:48px; padding:0 14px; cursor:pointer;
+  -webkit-appearance:none; outline:none;
+  touch-action:manipulation; -webkit-user-select:none;
+}
+.canvas-wrap { border-radius:10px; overflow:hidden; border:1.5px solid #dde3ea; margin-bottom:10px; background:#dce8f5; }
+canvas { display:block; width:100%; }
+.stats-row { display:flex; flex-wrap:wrap; gap:6px; }
+.stat { flex:1 1 calc(50% - 3px); border-radius:8px; padding:9px 8px; text-align:center; }
+.stat:nth-child(1){background:#eef5ff;} .stat:nth-child(2){background:#fff1ee;}
+.stat:nth-child(3){background:#eefff5;} .stat:nth-child(4){background:#f5f0ff;}
+.stat-label { font-size:9px; font-weight:700; margin-bottom:3px; }
+.stat:nth-child(1) .stat-label{color:#1a6fc4;} .stat:nth-child(2) .stat-label{color:#c04a1a;}
+.stat:nth-child(3) .stat-label{color:#1a8c4a;} .stat:nth-child(4) .stat-label{color:#6a3fc4;}
+.stat-val { font-size:13px; font-weight:700; color:#1a1a2e; }
+</style>
+</head>
+<body>
+<div class="lab">
+  <h1>🔬 공 튀기기 실험실</h1>
+  <div class="controls">
+    <div class="ctrl-card hc">
+      <span class="ctrl-label">📏 낙하 높이</span>
+      <div class="btn-group" id="height-group">
+        <button class="opt-btn on" data-val="1">1 m</button>
+        <button class="opt-btn" data-val="2">2 m</button>
+        <button class="opt-btn" data-val="3">3 m</button>
+      </div>
+    </div>
+    <div class="ctrl-card mc">
+      <span class="ctrl-label">⚖️ 무게</span>
+      <div class="btn-group" id="mass-group">
+        <button class="opt-btn on" data-val="1">1 kg</button>
+        <button class="opt-btn" data-val="2">2 kg</button>
+        <button class="opt-btn" data-val="3">3 kg</button>
+      </div>
+    </div>
+    <div class="ctrl-card sc">
+      <span class="ctrl-label">⭕ 크기</span>
+      <div class="btn-group" id="size-group">
+        <button class="opt-btn on" data-val="10">10cm</button>
+        <button class="opt-btn" data-val="20">20cm</button>
+        <button class="opt-btn" data-val="30">30cm</button>
+      </div>
+    </div>
+  </div>
+  <div class="launch-row">
+    <button class="launch-btn" id="launch-btn">▶ 실험 시작</button>
+    <button class="reset-btn" id="reset-btn">↺ 초기화</button>
+  </div>
+  <div class="canvas-wrap" id="cwrap">
+    <canvas id="sim"></canvas>
+  </div>
+  <div class="stats-row">
+    <div class="stat"><div class="stat-label">낙하 속도</div><div class="stat-val" id="s-vel">—</div></div>
+    <div class="stat"><div class="stat-label">바닥 충격력</div><div class="stat-val" id="s-force">—</div></div>
+    <div class="stat"><div class="stat-label">최대 반등 높이</div><div class="stat-val" id="s-bounce">—</div></div>
+    <div class="stat"><div class="stat-label">튕긴 횟수</div><div class="stat-val" id="s-count">0</div></div>
+  </div>
+</div>
+<script>
+(function(){
+  var canvas=document.getElementById('sim');
+  var ctx=canvas.getContext('2d');
+  var G=9.8,COR=0.75,PPM=85,STOP=18;
+  var params={height:1,mass:1,diameter:10};
+  var running=false,stopped=false,animId=null,lastTs=null;
+  var by,bvy,br,bounceCount,maxBounceH,firstImpact,trailPts,squishT;
+  var W=0,H=0;
+  function gy(){return H*0.87;}
+  function getBR(){return Math.max(10,(params.diameter/100)*PPM);}
+  function getSY(){var r=getBR();return Math.max(r+10,gy()-params.height*PPM-r);}
+  function reset(){
+    by=getSY();bvy=0;br=getBR();
+    bounceCount=0;maxBounceH=0;firstImpact=null;
+    trailPts=[];squishT=0;stopped=false;
+  }
+  function drawScene(){
+    ctx.clearRect(0,0,W,H);
+    var g=gy();
+    var sky=ctx.createLinearGradient(0,0,0,g);
+    sky.addColorStop(0,'#b8d4f0');sky.addColorStop(1,'#dceaf8');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,W,g);
+    ctx.fillStyle='#8fb8d8';ctx.fillRect(0,g,W,H-g);
+    ctx.strokeStyle='#6a9cbf';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(0,g);ctx.lineTo(W,g);ctx.stroke();
+    ctx.fillStyle='rgba(80,130,170,0.8)';
+    ctx.font='12px sans-serif';ctx.textAlign='center';
+    ctx.fillText('지면',W/2,g+16);
+    var r=getBR(),s=getSY(),mx=W/2+r+18;
+    ctx.save();
+    ctx.strokeStyle='rgba(80,120,160,0.4)';ctx.lineWidth=1;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(mx,s+r);ctx.lineTo(mx,g);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(80,120,160,0.8)';
+    ctx.font='12px sans-serif';ctx.textAlign='left';
+    ctx.fillText(params.height+' m',mx+5,(s+r+g)/2+4);
+    ctx.restore();
+  }
+  function drawTrail(){
+    if(trailPts.length<2)return;
+    for(var i=1;i<trailPts.length;i++){
+      ctx.strokeStyle='rgba(220,80,20,'+(i/trailPts.length*0.28)+')';
+      ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(trailPts[i-1].x,trailPts[i-1].y);
+      ctx.lineTo(trailPts[i].x,trailPts[i].y);ctx.stroke();
+    }
+  }
+  function drawBall(y,sq){
+    var cx=W/2,r=br,g=gy();
+    var sx=sq>0?1+sq*0.35:1,sy2=sq>0?1-sq*0.3:1;
+    ctx.save();ctx.translate(cx,y);ctx.scale(sx,sy2);
+    var gr=ctx.createRadialGradient(-r*.3,-r*.3,r*.05,0,0,r);
+    gr.addColorStop(0,'#ff9a60');gr.addColorStop(.5,'#e84e0f');gr.addColorStop(1,'#8c2800');
+    ctx.fillStyle=gr;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.25)';
+    ctx.beginPath();ctx.arc(-r*.3,-r*.3,r*.32,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+    if(sq>0){
+      var sw=r*(1+sq*0.4)*2;
+      var grd=ctx.createRadialGradient(cx,g,0,cx,g,sw/2);
+      grd.addColorStop(0,'rgba(0,0,0,'+(sq*0.28)+')');
+      grd.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=grd;
+      ctx.beginPath();ctx.ellipse(cx,g+2,sw/2,5,0,0,Math.PI*2);ctx.fill();
+    }
+  }
+  function render(){drawScene();drawTrail();drawBall(by,squishT>0?squishT:0);}
+  function step(dt){
+    dt=Math.min(dt,0.04);
+    var g=gy();
+    if(stopped)return;
+    if(squishT>0){squishT-=dt*8;if(squishT<0)squishT=0;return;}
+    bvy+=G*PPM*dt;by+=bvy*dt;
+    if(bvy>0){trailPts.push({x:W/2,y:by});if(trailPts.length>50)trailPts.shift();}
+    if(by+br>=g){
+      by=g-br;
+      var vm=Math.abs(bvy/PPM);
+      if(firstImpact===null){
+        firstImpact=vm;
+        document.getElementById('s-vel').textContent=vm.toFixed(2)+' m/s';
+        document.getElementById('s-force').textContent=(params.mass*vm/0.03).toFixed(1)+' N';
+      }
+      var nv=bvy*COR*-1;
+      bounceCount++;
+      document.getElementById('s-count').textContent=bounceCount;
+      if(Math.abs(nv)<STOP){
+        bvy=0;squishT=0;stopped=true;running=false;trailPts=[];render();return;
+      }
+      bvy=nv;trailPts=[];squishT=1;
+      var ph=(bvy*bvy)/(2*G*PPM*PPM);
+      if(ph>maxBounceH){maxBounceH=ph;document.getElementById('s-bounce').textContent=maxBounceH.toFixed(2)+' m';}
+    }
+  }
+  function loop(ts){
+    if(!lastTs)lastTs=ts;
+    step((ts-lastTs)/1000);lastTs=ts;
+    render();
+    if(running)animId=requestAnimationFrame(loop);
+  }
+  function clearStats(){
+    document.getElementById('s-vel').textContent='—';
+    document.getElementById('s-force').textContent='—';
+    document.getElementById('s-bounce').textContent='—';
+    document.getElementById('s-count').textContent='0';
+  }
+  function onTap(el,fn){
+    var sy=0;
+    el.addEventListener('touchstart',function(e){sy=e.touches[0].clientY;},{passive:true});
+    el.addEventListener('touchend',function(e){
+      if(Math.abs(e.changedTouches[0].clientY-sy)>10)return;
+      e.preventDefault();fn();
+    },{passive:false});
+    el.addEventListener('click',fn);
+  }
+  onTap(document.getElementById('launch-btn'),function(){
+    if(running)return;
+    if(animId)cancelAnimationFrame(animId);
+    reset();clearStats();running=true;lastTs=null;
+    animId=requestAnimationFrame(loop);
+  });
+  onTap(document.getElementById('reset-btn'),function(){
+    running=false;if(animId)cancelAnimationFrame(animId);
+    reset();clearStats();render();
+  });
+  [['height-group','height'],['mass-group','mass'],['size-group','diameter']].forEach(function(pair){
+    var group=document.getElementById(pair[0]);
+    var btns=group.querySelectorAll('.opt-btn');
+    function select(btn){
+      if(running)return;
+      for(var i=0;i<btns.length;i++)btns[i].classList.remove('on');
+      btn.classList.add('on');
+      params[pair[1]]=parseFloat(btn.getAttribute('data-val'));
+      reset();render();
+    }
+    for(var i=0;i<btns.length;i++){
+      (function(btn){
+        var sy=0;
+        btn.addEventListener('touchstart',function(e){sy=e.touches[0].clientY;},{passive:true});
+        btn.addEventListener('touchend',function(e){
+          if(Math.abs(e.changedTouches[0].clientY-sy)>10)return;
+          e.preventDefault();select(btn);
+        },{passive:false});
+        btn.addEventListener('click',function(){select(btn);});
+      })(btns[i]);
+    }
+  });
+  function initCanvas(){
+    var wrap=document.getElementById('cwrap');
+    var dpr=window.devicePixelRatio||1;
+    var displayW=wrap.offsetWidth||document.body.offsetWidth||window.innerWidth||320;
+    var displayH=Math.round(Math.min(Math.max(displayW*0.62,240),360));
+    W=Math.round(displayW*dpr);
+    H=Math.round(displayH*dpr);
+    canvas.width=W;canvas.height=H;
+    canvas.style.width=displayW+'px';
+    canvas.style.height=displayH+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    reset();render();
+  }
+  function tryInit(){
+    var wrap=document.getElementById('cwrap');
+    if(wrap.offsetWidth>0){initCanvas();}
+    else{setTimeout(initCanvas,300);}
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(tryInit,100);});
+  } else {
+    setTimeout(tryInit,100);
+  }
+  window.addEventListener('load',function(){if(W===0)initCanvas();});
+  setTimeout(function(){if(W===0)initCanvas();},600);
+  window.addEventListener('resize',function(){if(!running)initCanvas();});
+})();
+</script>
+</body>
+</html>
+
+붙여넣는 순서:
+
+GitHub에서 index.html → 연필(✏️) 클릭
+편집창 Ctrl+A → Delete
+위 코드 Ctrl+A → Ctrl+C → 편집창에 Ctrl+V
+Commit changes 클릭 → 팝업에서 Commit changes 한 번 더
+
+완료 후 1~2분 기다렸다가 카카오톡에서 링크 열어보세요!입력 내용: 카카오톡에는 나오는데 공위 안튀긴다카카오톡에는 나오는데 공위 안튀긴다오후 11:31Claude 응답: 캔버스는 뜨는데 버튼이 안 눌리는 거네요!캔버스는 뜨는데 버튼이 안 눌리는 거네요! 카카오톡 인앱브라우저에서 requestAnimationFrame 이 막히는 경우가 있어요. setInterval 방식으로 바꿔서 올려드릴게요.
+아래 코드로 다시 교체해주세요!
+html<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -308,6 +597,3 @@ canvas { display:block; width:100%; }
 </script>
 </body>
 </html>
-```
-
-똑같이 GitHub 편집창에서 `Ctrl+A` → 삭제 → 위 코드 붙여넣기 → **Commit changes** 하면 돼요!
